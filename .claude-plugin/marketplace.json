@@ -1,0 +1,16 @@
+{
+  "name": "workhour-mcp",
+  "owner": {
+    "name": "workhour-mcp contributors"
+  },
+  "metadata": {
+    "description": "Self-hostable MCP that turns git history into timesheet drafts and files them via a gateway."
+  },
+  "plugins": [
+    {
+      "name": "workhour",
+      "source": "./plugins/workhour",
+      "description": "Generate a timesheet draft from the current repo's git history, then file it through the gateway with two-step confirmation."
+    }
+  ]
+}

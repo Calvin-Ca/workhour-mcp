@@ -1,0 +1,134 @@
+"""共享 Service Account 认证 + ai-service 内部工具转发。
+
+对标 _gateway_core.py 范式。仅依赖 httpx + env，无 app 依赖。
+
+认证优先级（ensure_auth）：
+    1. 预配 MCP_TEST_AUTH_TOKEN
+    2. 进程级缓存的 Service Account token
+    3. Service Account 自取（MCP_ENTITY_ID + MCP_API_KEY）
+
+日志铁律：只记 tool_name + user_id + auth 来源，绝不记 auth_token / api_key。
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+from typing import Any
+
+logger = logging.getLogger("mcp-service-account")
+
+AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://localhost:8000")
+
+# Service Account 凭据
+MCP_ENTITY_ID = os.getenv("MCP_ENTITY_ID", "")
+MCP_API_KEY = os.getenv("MCP_API_KEY", "")
+
+# 预配回退
+USER_ID = os.getenv("MCP_TEST_USER_ID", "")
+ENTITY_TYPE = os.getenv("MCP_TEST_ENTITY_TYPE", "employee")
+AUTH_TOKEN = os.getenv("MCP_TEST_AUTH_TOKEN", "")
+
+# 进程级缓存
+_cached_token: str | None = None
+_cached_user_id: str | None = None
+_cached_entity_type: str | None = None
+
+# 后端返回的角色字段键名
+_ROLE_KEY = "entityType"
+
+
+async def fetch_service_account_token(
+    entity_id: str,
+    api_key: str,
+    *,
+    ai_service_url: str,
+    role_key: str = _ROLE_KEY,
+    fallback_entity_type: str = ENTITY_TYPE,
+) -> tuple[str, str, str]:
+    """纯取数：POST mcp-token 换 (token, user_id, entity_type)。
+
+    无 env 读取、无缓存、无全局态。stdio ensure_auth 与网关 resolver 共用。
+    token 空 → RuntimeError；角色键缺失 → 回退 fallback_entity_type（绝不空）。
+    """
+    import httpx
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        resp = await client.post(
+            f"{ai_service_url}/api/internal/auth/mcp-token",
+            json={"entity_id": entity_id, "api_key": api_key},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+    token = data.get("token", "")
+    if not token:
+        raise RuntimeError("Service Account 认证返回空 token")
+    user_id = data.get("userId", "")
+    entity_type = data.get(role_key) or fallback_entity_type
+    return token, user_id, entity_type
+
+
+def auth_configured() -> bool:
+    """预配 token 或 (entity_id + api_key) 任一齐备即视为已配置。"""
+    return bool(AUTH_TOKEN) or bool(MCP_ENTITY_ID and MCP_API_KEY)
+
+
+async def ensure_auth() -> tuple[str, str, str]:
+    """返回 (user_id, entity_type, auth_token)。
+
+    优先级：预配 token → 进程级缓存 → Service Account 自取。
+    """
+    global _cached_token, _cached_user_id, _cached_entity_type
+
+    if AUTH_TOKEN:
+        logger.info("auth source=preconfigured user_id=%s", USER_ID or MCP_ENTITY_ID)
+        return (USER_ID or MCP_ENTITY_ID, ENTITY_TYPE, AUTH_TOKEN)
+
+    if _cached_token:
+        logger.info("auth source=cache user_id=%s", _cached_user_id or MCP_ENTITY_ID)
+        return (
+            _cached_user_id or MCP_ENTITY_ID,
+            _cached_entity_type or ENTITY_TYPE,
+            _cached_token,
+        )
+
+    if MCP_ENTITY_ID and MCP_API_KEY:
+        logger.info("auth source=service_account fetching entity_id=%s", MCP_ENTITY_ID)
+        token, user_id, role = await fetch_service_account_token(
+            MCP_ENTITY_ID, MCP_API_KEY,
+            ai_service_url=AI_SERVICE_URL,
+            role_key=_ROLE_KEY,
+            fallback_entity_type=ENTITY_TYPE,
+        )
+        _cached_token = token
+        _cached_user_id = user_id
+        _cached_entity_type = role
+        logger.info(
+            "auth resolved source=service_account user_id=%s entity_type=%s",
+            user_id, role,
+        )
+        return (user_id, role, token)
+
+    return ("", "", "")
+
+
+async def call_ai_service_tool(tool_name: str, params: dict[str, Any]) -> dict[str, Any]:
+    """解析认证后转发到 ai-service 内部工具端点。"""
+    import httpx
+
+    user_id, entity_type, auth_token = await ensure_auth()
+    logger.info("forward tool=%s user_id=%s", tool_name, user_id)
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post(
+            f"{AI_SERVICE_URL}/api/internal/tools/{tool_name}",
+            json=params,
+            headers={
+                "X-User-ID": user_id,
+                "X-Entity-Type": entity_type,
+                "X-Auth-Token": auth_token,
+            },
+        )
+        resp.raise_for_status()
+        return resp.json()

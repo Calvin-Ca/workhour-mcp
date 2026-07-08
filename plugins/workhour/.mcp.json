@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "workhour-gateway": {
+      "type": "http",
+      "url": "${WORKHOUR_GATEWAY_URL}",
+      "headers": {
+        "X-Gateway-Token": "${WORKHOUR_GATEWAY_TOKEN}",
+        "X-Entity-ID": "${WORKHOUR_ENTITY_ID}"
+      }
+    }
+  }
+}

@@ -1,0 +1,30 @@
+services:
+  # 沙箱后端：假数据，仅供本地演示 / 官方 market 评审。
+  # 生产请删掉本服务，并把 gateway 的 AI_SERVICE_URL 指向真实 ai-service。
+  mock-ai-service:
+    build: ./mock-ai-service
+    container_name: workhour-mock-ai-service
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  gateway:
+    build: ./gateway
+    container_name: workhour-gateway
+    ports:
+      - "8765:8765"
+    environment:
+      # 网关共享令牌：客户端 X-Gateway-Token 必须与之相等。请改成强随机值。
+      MCP_GATEWAY_TOKEN: "${MCP_GATEWAY_TOKEN:?set MCP_GATEWAY_TOKEN in .env}"
+      # 后端地址：默认指向同 compose 的沙箱；生产改成真实 ai-service。
+      AI_SERVICE_URL: "${AI_SERVICE_URL:-http://mock-ai-service:8000}"
+      # Service Account 换 JWT 用的 api_key（沙箱可留空）。
+      MCP_API_KEY: "${MCP_API_KEY:-}"
+      MCP_GATEWAY_TOKEN_TTL: "${MCP_GATEWAY_TOKEN_TTL:-1500}"
+    depends_on:
+      mock-ai-service:
+        condition: service_healthy
