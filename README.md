@@ -1,5 +1,15 @@
 # workhour-mcp
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![MCP](https://img.shields.io/badge/MCP-server-blue)](https://modelcontextprotocol.io)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-8A63D2)](https://docs.claude.com/en/docs/claude-code)
+[![Codex CLI](https://img.shields.io/badge/Codex%20CLI-compatible-000000)](docs/CODEX.md)
+[![Self-hostable](https://img.shields.io/badge/self--hostable-docker%20compose-2496ED)](docs/SELF-HOSTING.md)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](docs/OFFICIAL-MARKETPLACE-CHECKLIST.md)
+
+> **Log the work you already did.** Point it at any git repo, get a per-day timesheet
+> draft, confirm, done — from inside Claude Code or Codex.
+
 Turn your **git history into timesheet drafts** and file them from the command line —
 in **Claude Code** (`/workhour:fill-workhour`) or **Codex CLI** (MCP tools) — with a
 **two-step confirmation** so nothing is written until you say so.
