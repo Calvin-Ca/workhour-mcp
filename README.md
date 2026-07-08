@@ -45,7 +45,7 @@ export WORKHOUR_GATEWAY_TOKEN="<the MCP_GATEWAY_TOKEN you just set>"
 export WORKHOUR_ENTITY_ID="sandbox-user"     # your identity; any string in sandbox
 
 # 3. Install the plugin in Claude Code
-claude plugin marketplace add <owner>/workhour-mcp     # this GitHub repo
+claude plugin marketplace add Calvin-Ca/workhour-mcp     # this GitHub repo
 claude plugin install workhour
 # fully restart Claude Code, then: /mcp should show workhour-gateway connected
 ```

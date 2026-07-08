@@ -23,7 +23,7 @@
 ## 提交流程
 
 1. 先自建公开市场验证端到端：把本仓库推到公开 GitHub → 在干净机器上
-   `claude plugin marketplace add <owner>/workhour-mcp && claude plugin install workhour`
+   `claude plugin marketplace add Calvin-Ca/workhour-mcp && claude plugin install workhour`
    → 全流程跑通。
 2. Fork `anthropics/claude-plugins-official`，按其 `marketplace.json` 结构把本插件登记为
    一个条目（`source` 指向本仓库），遵守其 README 的贡献/命名规范。
