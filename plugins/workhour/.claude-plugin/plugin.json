@@ -1,6 +1,6 @@
 {
   "name": "workhour",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Turn your git history into timesheet drafts and file them via a self-hosted MCP gateway (two-step confirmation). Works with Claude Code and Codex CLI.",
   "author": {
     "name": "workhour-mcp contributors"
